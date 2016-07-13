@@ -13,11 +13,20 @@ import org.vaadin.viritin.layouts.MVerticalLayout;
 import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.VaadinServletConfiguration;
 import com.vaadin.annotations.Widgetset;
+import com.vaadin.data.Container.PropertySetChangeEvent;
+import com.vaadin.data.Container.PropertySetChangeListener;
+import com.vaadin.data.Item;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.data.fieldgroup.FieldGroup.CommitEvent;
+import com.vaadin.data.fieldgroup.FieldGroup.CommitException;
+import com.vaadin.data.fieldgroup.FieldGroup.CommitHandler;
+import com.vaadin.data.util.BeanItem;
 import com.vaadin.data.util.BeanItemContainer;
+import com.vaadin.event.SelectionEvent;
 import com.vaadin.event.FieldEvents.TextChangeEvent;
 import com.vaadin.event.FieldEvents.TextChangeListener;
+import com.vaadin.event.SelectionEvent.SelectionListener;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.AbstractSelect.ItemCaptionMode;
@@ -29,6 +38,7 @@ import com.vaadin.ui.Grid.SelectionMode;
 import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.ListSelect;
+import com.vaadin.ui.Notification;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
@@ -64,6 +74,8 @@ public class MyUI extends UI {
         myGrid.setWidth("50%");
         myGrid.setSelectionMode(SelectionMode.SINGLE);
         myGrid.setEditorEnabled(true);
+       
+        
         
         MButton button = new MButton("Remove Item");
         button.addClickListener(this::removeList);
@@ -71,6 +83,33 @@ public class MyUI extends UI {
         options = new BeanItemContainer<ProductOption>(ProductOption.class);
         myGrid.setContainerDataSource(options);
         myGrid.setColumns("optionName");
+        //After setContainerDateSource with the Grid, we can get the EditorFieldGroup and its CommitHandler to save the change back to the list.
+        myGrid.getEditorFieldGroup().addCommitHandler(new CommitHandler() {
+			
+        	
+			@Override
+			public void preCommit(CommitEvent commitEvent) throws CommitException {
+				
+				BeanItem<ProductOption> p=(BeanItem<ProductOption>) commitEvent.getFieldBinder().getItemDataSource();
+				ProductOption pOption=p.getBean();
+				list.remove(pOption);
+				
+			}
+			
+			@Override
+			public void postCommit(CommitEvent commitEvent) throws CommitException {
+	
+				BeanItem<ProductOption> p=(BeanItem<ProductOption>) commitEvent.getFieldBinder().getItemDataSource();
+				ProductOption pOption=p.getBean();
+				list.add(pOption);
+				
+				list.stream().forEach(x->System.out.println(x.getOptionName()));
+				
+			}
+		});
+        
+        
+        
         options.addAll(list);
         
         ComboBox comboBox = new ComboBox();
@@ -93,6 +132,7 @@ public class MyUI extends UI {
         
         
         MTextField textField = new MTextField();
+        textField.selectAll();
         textField.addTextChangeListener(new TextChangeListener(){
 
 			@Override
@@ -124,7 +164,7 @@ public class MyUI extends UI {
     	options.removeItem(myGrid.getSelectedRow());
     	//Remove the Item from the collection list
     	list.remove(myGrid.getSelectedRow());
-    	
+    
     }
     
     //Create a temp List that allows the Item to be add into Grid.
